@@ -28,6 +28,16 @@ namespace Gabo
             ProcesarEntrada();
         }
 
+        private void MetodoRecorrido_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!(sender is RadioButton radioButton) || !radioButton.Checked)
+            {
+                return;
+            }
+
+            ActualizarRecorrido();
+        }
+
         private void ProcesarEntrada()
         {
             try
@@ -120,6 +130,7 @@ namespace Gabo
             }
 
             MostrarEstado(mensaje, false);
+            ActualizarRecorrido();
         }
 
         private void AssignPositions(TreeNodeModel node, float leftBound, float rightBound, int depth)
@@ -215,12 +226,81 @@ namespace Gabo
                 picLienzo.Image.Dispose();
                 picLienzo.Image = null;
             }
+
+            txtRecorrido.Clear();
         }
 
         private void MostrarEstado(string mensaje, bool esError)
         {
             lblEstado.Text = mensaje;
             lblEstado.ForeColor = esError ? Color.Firebrick : Color.DimGray;
+        }
+
+        private void ActualizarRecorrido()
+        {
+            if (_currentRoot == null)
+            {
+                txtRecorrido.Clear();
+                return;
+            }
+
+            txtRecorrido.Text = ObtenerRecorrido(_currentRoot);
+        }
+
+        private string ObtenerRecorrido(TreeNodeModel root)
+        {
+            var buffer = new List<string>();
+
+            if (rdbInorden.Checked)
+            {
+                RecorridoInorden(root, buffer);
+            }
+            else if (rdbPostorden.Checked)
+            {
+                RecorridoPostorden(root, buffer);
+            }
+            else
+            {
+                RecorridoPreorden(root, buffer);
+            }
+
+            return string.Join(", ", buffer);
+        }
+
+        private void RecorridoPreorden(TreeNodeModel node, IList<string> buffer)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            buffer.Add(node.Value);
+            RecorridoPreorden(node.Left, buffer);
+            RecorridoPreorden(node.Right, buffer);
+        }
+
+        private void RecorridoInorden(TreeNodeModel node, IList<string> buffer)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            RecorridoInorden(node.Left, buffer);
+            buffer.Add(node.Value);
+            RecorridoInorden(node.Right, buffer);
+        }
+
+        private void RecorridoPostorden(TreeNodeModel node, IList<string> buffer)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            RecorridoPostorden(node.Left, buffer);
+            RecorridoPostorden(node.Right, buffer);
+            buffer.Add(node.Value);
         }
 
         private sealed class TreeNodeModel
