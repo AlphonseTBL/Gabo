@@ -13,14 +13,37 @@ namespace Gabo
         private const int HorizontalSpacing = 40;
         private const int VerticalSpacing = 90;
         private const int CanvasMargin = 40;
+        private const int AnimationIntervalMs = 650;
+
+        private readonly Timer _animacionTimer;
+        private readonly List<TreeNodeModel> _recorridoAnimado = new List<TreeNodeModel>();
 
         private TreeNodeModel _currentRoot;
+        private int _indiceRecorrido = -1;
+        private int _canvasWidth;
+        private int _canvasHeight;
+
+        private enum TraversalMethod
+        {
+            Preorden,
+            Inorden,
+            Postorden
+        }
 
         public Form1()
         {
             InitializeComponent();
+            _animacionTimer = new Timer { Interval = AnimationIntervalMs };
+            _animacionTimer.Tick += AnimacionTimer_Tick;
+
             txtNodos.Text = "F,B,G,A,D,I,C,E,H";
             ProcesarEntrada();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _animacionTimer?.Dispose();
+            base.OnFormClosed(e);
         }
 
         private void btnGenerar_Click(object sender, EventArgs e)
@@ -30,16 +53,16 @@ namespace Gabo
 
         private void MetodoRecorrido_CheckedChanged(object sender, EventArgs e)
         {
-            if (!(sender is RadioButton radioButton) || !radioButton.Checked)
+            if (sender is RadioButton radioButton && radioButton.Checked)
             {
-                return;
+                ProcesarEntrada();
             }
-
-            ActualizarRecorrido();
         }
 
         private void ProcesarEntrada()
         {
+            ResetAnimacion();
+
             try
             {
                 var valores = ParseInput();
@@ -50,24 +73,37 @@ namespace Gabo
                     return;
                 }
 
-                var valoresUnicos = valores
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
+                var metodo = ObtenerMetodoSeleccionado();
 
-                bool seOmitieronDuplicados = valoresUnicos.Count != valores.Count;
+                _currentRoot = BuildBalancedStructure(valores.Count);
+                AsignarValoresPorRecorrido(_currentRoot, valores, metodo);
 
-                var ordenados = valoresUnicos
-                    .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
+                RenderTree(valores.Count);
 
-                _currentRoot = BuildBalanced(ordenados, 0, ordenados.Count - 1);
-                RenderTree(valoresUnicos.Count, seOmitieronDuplicados);
+                var recorridoNodos = ObtenerRecorridoNodos(_currentRoot, metodo).ToList();
+                ActualizarRecorrido(recorridoNodos);
+                IniciarAnimacionVisual(recorridoNodos);
             }
             catch (Exception ex)
             {
                 ClearCanvas();
                 MostrarEstado($"Ocurrió un problema al generar el árbol: {ex.Message}", true);
             }
+        }
+
+        private TraversalMethod ObtenerMetodoSeleccionado()
+        {
+            if (rdbInorden.Checked)
+            {
+                return TraversalMethod.Inorden;
+            }
+
+            if (rdbPostorden.Checked)
+            {
+                return TraversalMethod.Postorden;
+            }
+
+            return TraversalMethod.Preorden;
         }
 
         private List<string> ParseInput()
@@ -79,21 +115,80 @@ namespace Gabo
                 .ToList();
         }
 
-        private TreeNodeModel BuildBalanced(IList<string> valores, int inicio, int fin)
+        private TreeNodeModel BuildBalancedStructure(int count)
         {
-            if (inicio > fin)
+            if (count <= 0)
             {
                 return null;
             }
 
-            int medio = (inicio + fin) / 2;
-            var nodo = new TreeNodeModel(valores[medio]);
-            nodo.Left = BuildBalanced(valores, inicio, medio - 1);
-            nodo.Right = BuildBalanced(valores, medio + 1, fin);
-            return nodo;
+            int leftCount = (count - 1) / 2;
+            int rightCount = count - 1 - leftCount;
+
+            var node = new TreeNodeModel(string.Empty)
+            {
+                Left = BuildBalancedStructure(leftCount),
+                Right = BuildBalancedStructure(rightCount)
+            };
+
+            return node;
         }
 
-        private void RenderTree(int totalNodos, bool seOmitieronDuplicados)
+        private void AsignarValoresPorRecorrido(TreeNodeModel root, IList<string> valores, TraversalMethod metodo)
+        {
+            int indice = 0;
+
+            switch (metodo)
+            {
+                case TraversalMethod.Inorden:
+                    AsignarInorden(root, valores, ref indice);
+                    break;
+                case TraversalMethod.Postorden:
+                    AsignarPostorden(root, valores, ref indice);
+                    break;
+                default:
+                    AsignarPreorden(root, valores, ref indice);
+                    break;
+            }
+        }
+
+        private void AsignarPreorden(TreeNodeModel node, IList<string> valores, ref int indice)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            node.Value = valores[indice++];
+            AsignarPreorden(node.Left, valores, ref indice);
+            AsignarPreorden(node.Right, valores, ref indice);
+        }
+
+        private void AsignarInorden(TreeNodeModel node, IList<string> valores, ref int indice)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            AsignarInorden(node.Left, valores, ref indice);
+            node.Value = valores[indice++];
+            AsignarInorden(node.Right, valores, ref indice);
+        }
+
+        private void AsignarPostorden(TreeNodeModel node, IList<string> valores, ref int indice)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            AsignarPostorden(node.Left, valores, ref indice);
+            AsignarPostorden(node.Right, valores, ref indice);
+            node.Value = valores[indice++];
+        }
+
+        private void RenderTree(int totalNodos)
         {
             if (_currentRoot == null)
             {
@@ -105,12 +200,25 @@ namespace Gabo
             int altura = GetHeight(_currentRoot);
             int maximoEnNivel = (int)Math.Pow(2, Math.Max(0, altura - 1));
             int espacioNodo = NodeRadius * 2 + HorizontalSpacing;
-            int ancho = Math.Max(maximoEnNivel * espacioNodo + CanvasMargin * 2, Math.Max(320, panelLienzo.ClientSize.Width - 20));
-            int alto = altura * VerticalSpacing + CanvasMargin * 2;
 
-            AssignPositions(_currentRoot, CanvasMargin, ancho - CanvasMargin, 0);
+            _canvasWidth = Math.Max(maximoEnNivel * espacioNodo + CanvasMargin * 2, Math.Max(320, panelLienzo.ClientSize.Width - 20));
+            _canvasHeight = altura * VerticalSpacing + CanvasMargin * 2;
 
-            var bitmap = new Bitmap(ancho, alto);
+            AssignPositions(_currentRoot, CanvasMargin, _canvasWidth - CanvasMargin, 0);
+            Redibujar();
+
+            MostrarEstado($"Árbol balanceado con {totalNodos} nodos y {altura} niveles.", false);
+        }
+
+        private void Redibujar()
+        {
+            if (_currentRoot == null || _canvasWidth <= 0 || _canvasHeight <= 0)
+            {
+                ClearCanvas();
+                return;
+            }
+
+            var bitmap = new Bitmap(_canvasWidth, _canvasHeight);
             using (var graficos = Graphics.FromImage(bitmap))
             {
                 graficos.SmoothingMode = SmoothingMode.AntiAlias;
@@ -119,18 +227,9 @@ namespace Gabo
                 DrawNodes(graficos, _currentRoot);
             }
 
-            var imagenAnterior = picLienzo.Image;
+            var anterior = picLienzo.Image;
             picLienzo.Image = bitmap;
-            imagenAnterior?.Dispose();
-
-            string mensaje = $"Árbol balanceado con {totalNodos} nodos y {altura} niveles.";
-            if (seOmitieronDuplicados)
-            {
-                mensaje += " Se ignoraron duplicados para conservar la simetría.";
-            }
-
-            MostrarEstado(mensaje, false);
-            ActualizarRecorrido();
+            anterior?.Dispose();
         }
 
         private void AssignPositions(TreeNodeModel node, float leftBound, float rightBound, int depth)
@@ -182,31 +281,34 @@ namespace Gabo
         {
             using (var borde = new Pen(Color.SteelBlue, 2f))
             using (var texto = new SolidBrush(Color.FromArgb(45, 45, 45)))
-            using (var fondo = new SolidBrush(Color.White))
+            using (var fondoNormal = new SolidBrush(Color.White))
+            using (var fondoVisitado = new SolidBrush(Color.FromArgb(207, 226, 255)))
+            using (var fondoActual = new SolidBrush(Color.FromArgb(255, 210, 130)))
             using (var fuente = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point))
             {
-                DrawNodesInternal(graphics, node, borde, fondo, texto, fuente);
+                DrawNodesInternal(graphics, node, borde, texto, fondoNormal, fondoVisitado, fondoActual, fuente);
             }
         }
 
-        private void DrawNodesInternal(Graphics graphics, TreeNodeModel node, Pen borderPen, Brush fillBrush, Brush textBrush, Font font)
+        private void DrawNodesInternal(Graphics graphics, TreeNodeModel node, Pen borderPen, Brush textBrush, Brush normalBrush, Brush visitedBrush, Brush currentBrush, Font font)
         {
             if (node == null)
             {
                 return;
             }
 
-            DrawNodesInternal(graphics, node.Left, borderPen, fillBrush, textBrush, font);
+            DrawNodesInternal(graphics, node.Left, borderPen, textBrush, normalBrush, visitedBrush, currentBrush, font);
 
             var rect = new RectangleF(node.Position.X - NodeRadius, node.Position.Y - NodeRadius, NodeRadius * 2, NodeRadius * 2);
-            graphics.FillEllipse(fillBrush, rect);
+            var fill = node.IsCurrent ? currentBrush : node.IsVisited ? visitedBrush : normalBrush;
+            graphics.FillEllipse(fill, rect);
             graphics.DrawEllipse(borderPen, rect);
 
             var size = graphics.MeasureString(node.Value, font);
             var textLocation = new PointF(node.Position.X - size.Width / 2f, node.Position.Y - size.Height / 2f);
             graphics.DrawString(node.Value, font, textBrush, textLocation);
 
-            DrawNodesInternal(graphics, node.Right, borderPen, fillBrush, textBrush, font);
+            DrawNodesInternal(graphics, node.Right, borderPen, textBrush, normalBrush, visitedBrush, currentBrush, font);
         }
 
         private int GetHeight(TreeNodeModel node)
@@ -219,8 +321,148 @@ namespace Gabo
             return 1 + Math.Max(GetHeight(node.Left), GetHeight(node.Right));
         }
 
+        private void AnimacionTimer_Tick(object sender, EventArgs e)
+        {
+            if (_recorridoAnimado.Count == 0)
+            {
+                _animacionTimer.Stop();
+                return;
+            }
+
+            if (_indiceRecorrido >= 0 && _indiceRecorrido < _recorridoAnimado.Count)
+            {
+                var previo = _recorridoAnimado[_indiceRecorrido];
+                previo.IsVisited = true;
+                previo.IsCurrent = false;
+            }
+
+            _indiceRecorrido++;
+
+            if (_indiceRecorrido >= _recorridoAnimado.Count)
+            {
+                Redibujar();
+                MostrarEstado("Recorrido completado.", false);
+                _animacionTimer.Stop();
+                return;
+            }
+
+            var actual = _recorridoAnimado[_indiceRecorrido];
+            actual.IsCurrent = true;
+            Redibujar();
+            MostrarEstado($"Paso {_indiceRecorrido + 1}/{_recorridoAnimado.Count}: {actual.Value}", false);
+        }
+
+        private void IniciarAnimacionVisual(IList<TreeNodeModel> recorrido)
+        {
+            _animacionTimer.Stop();
+            ResetEstados(_currentRoot);
+            _recorridoAnimado.Clear();
+            _recorridoAnimado.AddRange(recorrido);
+            _indiceRecorrido = -1;
+
+            if (_recorridoAnimado.Count == 0)
+            {
+                Redibujar();
+                return;
+            }
+
+            _animacionTimer.Start();
+            AnimacionTimer_Tick(this, EventArgs.Empty);
+        }
+
+        private void ResetEstados(TreeNodeModel node)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            node.IsVisited = false;
+            node.IsCurrent = false;
+
+            ResetEstados(node.Left);
+            ResetEstados(node.Right);
+        }
+
+        private void ResetAnimacion()
+        {
+            _animacionTimer.Stop();
+            _recorridoAnimado.Clear();
+            _indiceRecorrido = -1;
+            ResetEstados(_currentRoot);
+        }
+
+        private IEnumerable<TreeNodeModel> ObtenerRecorridoNodos(TreeNodeModel root, TraversalMethod metodo)
+        {
+            var lista = new List<TreeNodeModel>();
+
+            switch (metodo)
+            {
+                case TraversalMethod.Inorden:
+                    RecorridoInorden(root, lista);
+                    break;
+                case TraversalMethod.Postorden:
+                    RecorridoPostorden(root, lista);
+                    break;
+                default:
+                    RecorridoPreorden(root, lista);
+                    break;
+            }
+
+            return lista;
+        }
+
+        private void RecorridoPreorden(TreeNodeModel node, IList<TreeNodeModel> lista)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            lista.Add(node);
+            RecorridoPreorden(node.Left, lista);
+            RecorridoPreorden(node.Right, lista);
+        }
+
+        private void RecorridoInorden(TreeNodeModel node, IList<TreeNodeModel> lista)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            RecorridoInorden(node.Left, lista);
+            lista.Add(node);
+            RecorridoInorden(node.Right, lista);
+        }
+
+        private void RecorridoPostorden(TreeNodeModel node, IList<TreeNodeModel> lista)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            RecorridoPostorden(node.Left, lista);
+            RecorridoPostorden(node.Right, lista);
+            lista.Add(node);
+        }
+
+        private void ActualizarRecorrido(IList<TreeNodeModel> recorrido)
+        {
+            if (recorrido == null || recorrido.Count == 0)
+            {
+                txtRecorrido.Clear();
+                return;
+            }
+
+            txtRecorrido.Text = string.Join(", ", recorrido.Select(n => n.Value));
+        }
+
         private void ClearCanvas()
         {
+            _animacionTimer.Stop();
+
             if (picLienzo.Image != null)
             {
                 picLienzo.Image.Dispose();
@@ -236,73 +478,6 @@ namespace Gabo
             lblEstado.ForeColor = esError ? Color.Firebrick : Color.DimGray;
         }
 
-        private void ActualizarRecorrido()
-        {
-            if (_currentRoot == null)
-            {
-                txtRecorrido.Clear();
-                return;
-            }
-
-            txtRecorrido.Text = ObtenerRecorrido(_currentRoot);
-        }
-
-        private string ObtenerRecorrido(TreeNodeModel root)
-        {
-            var buffer = new List<string>();
-
-            if (rdbInorden.Checked)
-            {
-                RecorridoInorden(root, buffer);
-            }
-            else if (rdbPostorden.Checked)
-            {
-                RecorridoPostorden(root, buffer);
-            }
-            else
-            {
-                RecorridoPreorden(root, buffer);
-            }
-
-            return string.Join(", ", buffer);
-        }
-
-        private void RecorridoPreorden(TreeNodeModel node, IList<string> buffer)
-        {
-            if (node == null)
-            {
-                return;
-            }
-
-            buffer.Add(node.Value);
-            RecorridoPreorden(node.Left, buffer);
-            RecorridoPreorden(node.Right, buffer);
-        }
-
-        private void RecorridoInorden(TreeNodeModel node, IList<string> buffer)
-        {
-            if (node == null)
-            {
-                return;
-            }
-
-            RecorridoInorden(node.Left, buffer);
-            buffer.Add(node.Value);
-            RecorridoInorden(node.Right, buffer);
-        }
-
-        private void RecorridoPostorden(TreeNodeModel node, IList<string> buffer)
-        {
-            if (node == null)
-            {
-                return;
-            }
-
-            RecorridoPostorden(node.Left, buffer);
-            RecorridoPostorden(node.Right, buffer);
-            buffer.Add(node.Value);
-        }
-
         private sealed class TreeNodeModel
         {
             public TreeNodeModel(string value)
@@ -310,10 +485,12 @@ namespace Gabo
                 Value = value;
             }
 
-            public string Value { get; }
+            public string Value { get; set; }
             public TreeNodeModel Left { get; set; }
             public TreeNodeModel Right { get; set; }
             public PointF Position { get; set; }
+            public bool IsVisited { get; set; }
+            public bool IsCurrent { get; set; }
         }
     }
 }
