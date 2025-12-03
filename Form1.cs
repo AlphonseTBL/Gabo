@@ -44,8 +44,8 @@ namespace Gabo
             _animacionTimer = new Timer { Interval = AnimationIntervalMs };
             _animacionTimer.Tick += AnimacionTimer_Tick;
 
-            txtNodos.Text = "F,B,G,A,D,I,C,E,H";
-            ProcesarEntrada();
+            txtEditorNodos.Text = "F,B,G,A,D,I,C,E,H";
+            ProcesarEntrada(false);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -56,7 +56,13 @@ namespace Gabo
 
         private void btnGenerar_Click(object sender, EventArgs e)
         {
-            ProcesarEntrada();
+            bool interpretarComoRecorrido = tabModo.SelectedTab == tabCodigoAArbol;
+            ProcesarEntrada(interpretarComoRecorrido);
+        }
+
+        private void btnAplicarEditor_Click(object sender, EventArgs e)
+        {
+            ProcesarEntrada(false);
         }
 
         private void MetodoRecorrido_CheckedChanged(object sender, EventArgs e)
@@ -67,35 +73,68 @@ namespace Gabo
             }
         }
 
-        private void ProcesarEntrada()
+        private void tabModo_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ProcesarEntrada();
+        }
+
+        private void ProcesarEntrada(bool? interpretarComoRecorrido = null)
         {
             ResetAnimacion();
 
             try
             {
-                var valores = ParseInput();
+                bool usarRecorrido = interpretarComoRecorrido ?? (tabModo?.SelectedTab == tabCodigoAArbol);
+                var valores = usarRecorrido ? ParseSequenceInput() : ParseEditorInput();
                 if (!valores.Any())
                 {
                     ClearCanvas();
                     MostrarEstado("Ingresa al menos un nodo separado por comas.", true);
+                    ActualizarCodigosGenerados();
+                    return;
+                }
+
+                _currentRoot = BuildBalancedStructure(valores, 0);
+                if (_currentRoot == null)
+                {
+                    ClearCanvas();
+                    MostrarEstado("Los valores proporcionados no generan nodos válidos.", true);
+                    ActualizarCodigosGenerados();
                     return;
                 }
 
                 var metodo = ObtenerMetodoSeleccionado();
 
-                _currentRoot = BuildBalancedStructure(valores, 0);
-                //AsignarValoresPorRecorrido(_currentRoot, valores, metodo);
+                if (usarRecorrido)
+                {
+                    var valoresAsignables = valores.Where(v => v != "-").ToList();
+                    int totalNodos = CountNodes(_currentRoot);
+                    if (valoresAsignables.Count != totalNodos)
+                    {
+                        throw new InvalidOperationException("La cantidad de valores no coincide con el tamaño del árbol generado.");
+                    }
 
-                RenderTree(valores.Count);
+                    AsignarValoresPorRecorrido(_currentRoot, valoresAsignables, metodo);
+                    ActualizarEditorDesdeArbol();
+                }
+                else
+                {
+                    ActualizarEditorDesdeArbol();
+                }
+
+                var total = CountNodes(_currentRoot);
+                RenderTree(total);
 
                 var recorridoNodos = ObtenerRecorridoNodos(_currentRoot, metodo).ToList();
                 ActualizarRecorrido(recorridoNodos);
                 IniciarAnimacionVisual(recorridoNodos);
+                ActualizarCodigosGenerados();
             }
             catch (Exception ex)
             {
                 ClearCanvas();
                 MostrarEstado($"Ocurrió un problema al generar el árbol: {ex.Message}", true);
+                ActualizarCodigosGenerados();
             }
         }
 
@@ -114,11 +153,20 @@ namespace Gabo
             return TraversalMethod.Preorden;
         }
 
-        private List<string> ParseInput()
+        private List<string> ParseEditorInput()
         {
-            return txtNodos.Text
-                //.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Split(new[] { ',' })
+            return ParseTokens(txtEditorNodos.Text);
+        }
+
+        private List<string> ParseSequenceInput()
+        {
+            return ParseTokens(txtNodos.Text);
+        }
+
+        private static List<string> ParseTokens(string texto)
+        {
+            return texto
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(token => token.Trim())
                 .Where(token => !string.IsNullOrWhiteSpace(token))
                 .ToList();
@@ -142,10 +190,13 @@ namespace Gabo
             return node;
         }
         
-        //ya no hace falta esto,
-        //en el nuevo buildbalancedstructure construye el arbol con los valores del nuevo metodo
-        /*private void AsignarValoresPorRecorrido(TreeNodeModel root, IList<string> valores, TraversalMethod metodo)
+        private void AsignarValoresPorRecorrido(TreeNodeModel root, IList<string> valores, TraversalMethod metodo)
         {
+            if (root == null)
+            {
+                return;
+            }
+
             int indice = 0;
 
             switch (metodo)
@@ -160,6 +211,11 @@ namespace Gabo
                     AsignarPreorden(root, valores, ref indice);
                     break;
             }
+
+            if (indice != valores.Count)
+            {
+                throw new InvalidOperationException("No se pudieron asignar todos los valores especificados.");
+            }
         }
 
         private void AsignarPreorden(TreeNodeModel node, IList<string> valores, ref int indice)
@@ -169,7 +225,11 @@ namespace Gabo
                 return;
             }
 
-            node.Index = indice;
+            if (indice >= valores.Count)
+            {
+                throw new InvalidOperationException("Faltan valores para completar el árbol en preorden.");
+            }
+
             node.Value = valores[indice++];
             AsignarPreorden(node.Left, valores, ref indice);
             AsignarPreorden(node.Right, valores, ref indice);
@@ -183,7 +243,12 @@ namespace Gabo
             }
 
             AsignarInorden(node.Left, valores, ref indice);
-            node.Index = indice;
+
+            if (indice >= valores.Count)
+            {
+                throw new InvalidOperationException("Faltan valores para completar el árbol en inorden.");
+            }
+
             node.Value = valores[indice++];
             AsignarInorden(node.Right, valores, ref indice);
         }
@@ -197,9 +262,14 @@ namespace Gabo
 
             AsignarPostorden(node.Left, valores, ref indice);
             AsignarPostorden(node.Right, valores, ref indice);
-            node.Index = indice;
+
+            if (indice >= valores.Count)
+            {
+                throw new InvalidOperationException("Faltan valores para completar el árbol en postorden.");
+            }
+
             node.Value = valores[indice++];
-        }*/
+        }
 
         private void RenderTree(int totalNodos)
         {
@@ -332,6 +402,16 @@ namespace Gabo
             }
 
             return 1 + Math.Max(GetHeight(node.Left), GetHeight(node.Right));
+        }
+
+        private int CountNodes(TreeNodeModel node)
+        {
+            if (node == null)
+            {
+                return 0;
+            }
+
+            return 1 + CountNodes(node.Left) + CountNodes(node.Right);
         }
 
         private void AnimacionTimer_Tick(object sender, EventArgs e)
@@ -472,6 +552,21 @@ namespace Gabo
             txtRecorrido.Text = string.Join(", ", recorrido.Select(n => n.Value));
         }
 
+        private void ActualizarCodigosGenerados()
+        {
+            if (_currentRoot == null)
+            {
+                txtCodigoPreorden.Clear();
+                txtCodigoInorden.Clear();
+                txtCodigoPostorden.Clear();
+                return;
+            }
+
+            txtCodigoPreorden.Text = string.Join(", ", ObtenerRecorridoNodos(_currentRoot, TraversalMethod.Preorden).Select(n => n.Value));
+            txtCodigoInorden.Text = string.Join(", ", ObtenerRecorridoNodos(_currentRoot, TraversalMethod.Inorden).Select(n => n.Value));
+            txtCodigoPostorden.Text = string.Join(", ", ObtenerRecorridoNodos(_currentRoot, TraversalMethod.Postorden).Select(n => n.Value));
+        }
+
         private void ClearCanvas()
         {
             _animacionTimer.Stop();
@@ -483,6 +578,7 @@ namespace Gabo
             }
 
             txtRecorrido.Clear();
+            ActualizarCodigosGenerados();
         }
 
         private void MostrarEstado(string mensaje, bool esError)
@@ -524,9 +620,16 @@ namespace Gabo
                     {
                         string contenido = File.ReadAllText(openFileDialog.FileName);
                      
-                        txtNodos.Text = contenido;
-
-                        ProcesarEntrada();
+                        if (tabModo.SelectedTab == tabCodigoAArbol)
+                        {
+                            txtNodos.Text = contenido;
+                            ProcesarEntrada(true);
+                        }
+                        else
+                        {
+                            txtEditorNodos.Text = contenido;
+                            ProcesarEntrada(false);
+                        }
 
                         MostrarEstado("archivo cargado correctamente.", false);
                     }
@@ -540,7 +643,7 @@ namespace Gabo
      
         private void picLienzo_MouseClick(object sender, MouseEventArgs e)
         {
-            var listaNodos = ParseInput();
+            var listaNodos = ParseEditorInput();
             if (listaNodos == null) listaNodos = new List<string>();
 
             var nodoTocado = BuscarNodoClickeado(_currentRoot, e.Location);
@@ -557,9 +660,9 @@ namespace Gabo
                         for (int i = 0; i < nodoTocado.Index; i++)
                             start += (i < listaNodos.Count ? listaNodos[i].Length : 1) + 1;
 
-                        txtNodos.Focus();
-                        if (start < txtNodos.TextLength)
-                            txtNodos.Select(start, listaNodos[nodoTocado.Index].Length);
+                        txtEditorNodos.Focus();
+                        if (start < txtEditorNodos.TextLength)
+                            txtEditorNodos.Select(start, listaNodos[nodoTocado.Index].Length);
                     });
 
                     menu.Items.Add("Eliminar", null, (s, args) => {
@@ -661,11 +764,53 @@ namespace Gabo
             }
         }
 
+        private void ActualizarEditorDesdeArbol()
+        {
+            if (_currentRoot == null)
+            {
+                txtEditorNodos.Clear();
+                return;
+            }
+
+            var lista = SerializarNivel(_currentRoot);
+            txtEditorNodos.Text = string.Join(",", lista);
+        }
+
+        private List<string> SerializarNivel(TreeNodeModel root)
+        {
+            var resultado = new List<string>();
+
+            if (root == null)
+            {
+                return resultado;
+            }
+
+            var cola = new Queue<TreeNodeModel>();
+            cola.Enqueue(root);
+
+            while (cola.Count > 0)
+            {
+                var actual = cola.Dequeue();
+                if (actual == null)
+                {
+                    resultado.Add("-");
+                    continue;
+                }
+
+                resultado.Add(actual.Value);
+                cola.Enqueue(actual.Left);
+                cola.Enqueue(actual.Right);
+            }
+
+            TrimLista(resultado);
+            return resultado;
+        }
+
         private void ActualizarArbolDesdeLista(List<string> lista)
         {
             TrimLista(lista);
-            txtNodos.Text = string.Join(",", lista);
-            ProcesarEntrada();
+            txtEditorNodos.Text = string.Join(",", lista);
+            ProcesarEntrada(false);
         }
 
         private TreeNodeModel BuscarNodoClickeado(TreeNodeModel node, PointF mousePos)
