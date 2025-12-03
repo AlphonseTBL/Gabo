@@ -28,7 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.panelSuperior = new System.Windows.Forms.Panel();
+            this.btnCargarArchivo = new System.Windows.Forms.Button();
             this.lblRecorridoTitulo = new System.Windows.Forms.Label();
             this.txtRecorrido = new System.Windows.Forms.TextBox();
             this.grpRecorridos = new System.Windows.Forms.GroupBox();
@@ -41,6 +43,7 @@
             this.lblInstrucciones = new System.Windows.Forms.Label();
             this.panelLienzo = new System.Windows.Forms.Panel();
             this.picLienzo = new System.Windows.Forms.PictureBox();
+            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.panelSuperior.SuspendLayout();
             this.grpRecorridos.SuspendLayout();
             this.panelLienzo.SuspendLayout();
@@ -50,6 +53,7 @@
             // panelSuperior
             // 
             this.panelSuperior.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.panelSuperior.Controls.Add(this.btnCargarArchivo);
             this.panelSuperior.Controls.Add(this.lblRecorridoTitulo);
             this.panelSuperior.Controls.Add(this.txtRecorrido);
             this.panelSuperior.Controls.Add(this.grpRecorridos);
@@ -59,18 +63,35 @@
             this.panelSuperior.Controls.Add(this.lblInstrucciones);
             this.panelSuperior.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelSuperior.Location = new System.Drawing.Point(0, 0);
+            this.panelSuperior.Margin = new System.Windows.Forms.Padding(6);
             this.panelSuperior.Name = "panelSuperior";
-            this.panelSuperior.Padding = new System.Windows.Forms.Padding(18, 15, 18, 10);
-            this.panelSuperior.Size = new System.Drawing.Size(844, 188);
+            this.panelSuperior.Padding = new System.Windows.Forms.Padding(36, 29, 36, 19);
+            this.panelSuperior.Size = new System.Drawing.Size(1688, 362);
             this.panelSuperior.TabIndex = 0;
+            // 
+            // btnCargarArchivo
+            // 
+            this.btnCargarArchivo.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCargarArchivo.BackColor = System.Drawing.Color.SteelBlue;
+            this.btnCargarArchivo.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnCargarArchivo.ForeColor = System.Drawing.Color.White;
+            this.btnCargarArchivo.Location = new System.Drawing.Point(1386, 108);
+            this.btnCargarArchivo.Margin = new System.Windows.Forms.Padding(6);
+            this.btnCargarArchivo.Name = "btnCargarArchivo";
+            this.btnCargarArchivo.Size = new System.Drawing.Size(266, 62);
+            this.btnCargarArchivo.TabIndex = 7;
+            this.btnCargarArchivo.Text = "Subir archivo";
+            this.btnCargarArchivo.UseVisualStyleBackColor = false;
+            this.btnCargarArchivo.Click += new System.EventHandler(this.btnCargarArchivo_Click);
             // 
             // lblRecorridoTitulo
             // 
             this.lblRecorridoTitulo.AutoSize = true;
             this.lblRecorridoTitulo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblRecorridoTitulo.Location = new System.Drawing.Point(21, 149);
+            this.lblRecorridoTitulo.Location = new System.Drawing.Point(42, 287);
+            this.lblRecorridoTitulo.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
             this.lblRecorridoTitulo.Name = "lblRecorridoTitulo";
-            this.lblRecorridoTitulo.Size = new System.Drawing.Size(152, 15);
+            this.lblRecorridoTitulo.Size = new System.Drawing.Size(290, 32);
             this.lblRecorridoTitulo.TabIndex = 6;
             this.lblRecorridoTitulo.Text = "Resultado del recorrido:";
             // 
@@ -81,10 +102,11 @@
             this.txtRecorrido.BackColor = System.Drawing.Color.White;
             this.txtRecorrido.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtRecorrido.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.txtRecorrido.Location = new System.Drawing.Point(180, 146);
+            this.txtRecorrido.Location = new System.Drawing.Point(360, 281);
+            this.txtRecorrido.Margin = new System.Windows.Forms.Padding(6);
             this.txtRecorrido.Name = "txtRecorrido";
             this.txtRecorrido.ReadOnly = true;
-            this.txtRecorrido.Size = new System.Drawing.Size(646, 23);
+            this.txtRecorrido.Size = new System.Drawing.Size(1290, 39);
             this.txtRecorrido.TabIndex = 5;
             this.txtRecorrido.TabStop = false;
             // 
@@ -96,9 +118,11 @@
             this.grpRecorridos.Controls.Add(this.rdbInorden);
             this.grpRecorridos.Controls.Add(this.rdbPreorden);
             this.grpRecorridos.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.grpRecorridos.Location = new System.Drawing.Point(24, 86);
+            this.grpRecorridos.Location = new System.Drawing.Point(48, 165);
+            this.grpRecorridos.Margin = new System.Windows.Forms.Padding(6);
             this.grpRecorridos.Name = "grpRecorridos";
-            this.grpRecorridos.Size = new System.Drawing.Size(653, 50);
+            this.grpRecorridos.Padding = new System.Windows.Forms.Padding(6);
+            this.grpRecorridos.Size = new System.Drawing.Size(1306, 96);
             this.grpRecorridos.TabIndex = 4;
             this.grpRecorridos.TabStop = false;
             this.grpRecorridos.Text = "Método de recorrido";
@@ -107,9 +131,10 @@
             // 
             this.rdbPostorden.AutoSize = true;
             this.rdbPostorden.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.rdbPostorden.Location = new System.Drawing.Point(256, 21);
+            this.rdbPostorden.Location = new System.Drawing.Point(512, 40);
+            this.rdbPostorden.Margin = new System.Windows.Forms.Padding(6);
             this.rdbPostorden.Name = "rdbPostorden";
-            this.rdbPostorden.Size = new System.Drawing.Size(77, 19);
+            this.rdbPostorden.Size = new System.Drawing.Size(152, 36);
             this.rdbPostorden.TabIndex = 2;
             this.rdbPostorden.Text = "Postorden";
             this.rdbPostorden.UseVisualStyleBackColor = true;
@@ -119,9 +144,10 @@
             // 
             this.rdbInorden.AutoSize = true;
             this.rdbInorden.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.rdbInorden.Location = new System.Drawing.Point(134, 21);
+            this.rdbInorden.Location = new System.Drawing.Point(268, 40);
+            this.rdbInorden.Margin = new System.Windows.Forms.Padding(6);
             this.rdbInorden.Name = "rdbInorden";
-            this.rdbInorden.Size = new System.Drawing.Size(68, 19);
+            this.rdbInorden.Size = new System.Drawing.Size(128, 36);
             this.rdbInorden.TabIndex = 1;
             this.rdbInorden.Text = "Inorden";
             this.rdbInorden.UseVisualStyleBackColor = true;
@@ -132,9 +158,10 @@
             this.rdbPreorden.AutoSize = true;
             this.rdbPreorden.Checked = true;
             this.rdbPreorden.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.rdbPreorden.Location = new System.Drawing.Point(12, 21);
+            this.rdbPreorden.Location = new System.Drawing.Point(24, 40);
+            this.rdbPreorden.Margin = new System.Windows.Forms.Padding(6);
             this.rdbPreorden.Name = "rdbPreorden";
-            this.rdbPreorden.Size = new System.Drawing.Size(74, 19);
+            this.rdbPreorden.Size = new System.Drawing.Size(142, 36);
             this.rdbPreorden.TabIndex = 0;
             this.rdbPreorden.TabStop = true;
             this.rdbPreorden.Text = "Preorden";
@@ -145,9 +172,10 @@
             // 
             this.lblEstado.AutoSize = true;
             this.lblEstado.ForeColor = System.Drawing.Color.DimGray;
-            this.lblEstado.Location = new System.Drawing.Point(21, 164);
+            this.lblEstado.Location = new System.Drawing.Point(42, 315);
+            this.lblEstado.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
             this.lblEstado.Name = "lblEstado";
-            this.lblEstado.Size = new System.Drawing.Size(305, 13);
+            this.lblEstado.Size = new System.Drawing.Size(579, 25);
             this.lblEstado.TabIndex = 3;
             this.lblEstado.Text = "Introduce los nodos, elige un recorrido y presiona \"Dibujar\".";
             // 
@@ -157,9 +185,10 @@
             this.btnGenerar.BackColor = System.Drawing.Color.SteelBlue;
             this.btnGenerar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnGenerar.ForeColor = System.Drawing.Color.White;
-            this.btnGenerar.Location = new System.Drawing.Point(693, 102);
+            this.btnGenerar.Location = new System.Drawing.Point(1386, 196);
+            this.btnGenerar.Margin = new System.Windows.Forms.Padding(6);
             this.btnGenerar.Name = "btnGenerar";
-            this.btnGenerar.Size = new System.Drawing.Size(133, 32);
+            this.btnGenerar.Size = new System.Drawing.Size(266, 62);
             this.btnGenerar.TabIndex = 2;
             this.btnGenerar.Text = "Dibujar árbol";
             this.btnGenerar.UseVisualStyleBackColor = false;
@@ -169,18 +198,20 @@
             // 
             this.txtNodos.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtNodos.Location = new System.Drawing.Point(24, 56);
+            this.txtNodos.Location = new System.Drawing.Point(48, 108);
+            this.txtNodos.Margin = new System.Windows.Forms.Padding(6);
             this.txtNodos.Name = "txtNodos";
-            this.txtNodos.Size = new System.Drawing.Size(653, 20);
+            this.txtNodos.Size = new System.Drawing.Size(1302, 31);
             this.txtNodos.TabIndex = 1;
             // 
             // lblInstrucciones
             // 
             this.lblInstrucciones.AutoSize = true;
             this.lblInstrucciones.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.lblInstrucciones.Location = new System.Drawing.Point(21, 20);
+            this.lblInstrucciones.Location = new System.Drawing.Point(42, 38);
+            this.lblInstrucciones.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
             this.lblInstrucciones.Name = "lblInstrucciones";
-            this.lblInstrucciones.Size = new System.Drawing.Size(476, 19);
+            this.lblInstrucciones.Size = new System.Drawing.Size(801, 37);
             this.lblInstrucciones.TabIndex = 0;
             this.lblInstrucciones.Text = "Sucesión de nodos separados por comas (ej. F,B,G,A,D,I,C,E,H)";
             // 
@@ -190,30 +221,39 @@
             this.panelLienzo.BackColor = System.Drawing.Color.Gainsboro;
             this.panelLienzo.Controls.Add(this.picLienzo);
             this.panelLienzo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelLienzo.Location = new System.Drawing.Point(0, 188);
+            this.panelLienzo.Location = new System.Drawing.Point(0, 362);
+            this.panelLienzo.Margin = new System.Windows.Forms.Padding(6);
             this.panelLienzo.Name = "panelLienzo";
-            this.panelLienzo.Size = new System.Drawing.Size(844, 335);
+            this.panelLienzo.Size = new System.Drawing.Size(1688, 644);
             this.panelLienzo.TabIndex = 1;
             // 
             // picLienzo
             // 
             this.picLienzo.BackColor = System.Drawing.Color.White;
             this.picLienzo.Location = new System.Drawing.Point(0, 0);
+            this.picLienzo.Margin = new System.Windows.Forms.Padding(6);
             this.picLienzo.Name = "picLienzo";
             this.picLienzo.Size = new System.Drawing.Size(0, 0);
             this.picLienzo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
             this.picLienzo.TabIndex = 0;
             this.picLienzo.TabStop = false;
             // 
+            // contextMenuStrip1
+            // 
+            this.contextMenuStrip1.ImageScalingSize = new System.Drawing.Size(32, 32);
+            this.contextMenuStrip1.Name = "contextMenuStrip1";
+            this.contextMenuStrip1.Size = new System.Drawing.Size(301, 48);
+            // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(844, 523);
+            this.ClientSize = new System.Drawing.Size(1688, 1006);
             this.Controls.Add(this.panelLienzo);
             this.Controls.Add(this.panelSuperior);
-            this.MinimumSize = new System.Drawing.Size(720, 480);
+            this.Margin = new System.Windows.Forms.Padding(6);
+            this.MinimumSize = new System.Drawing.Size(1414, 858);
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Visualizador de árbol binario";
@@ -235,7 +275,7 @@
         private System.Windows.Forms.Button btnGenerar;
         private System.Windows.Forms.TextBox txtNodos;
         private System.Windows.Forms.Panel panelLienzo;
-        private System.Windows.Forms.PictureBox picLienzo;
+        public System.Windows.Forms.PictureBox picLienzo;
         private System.Windows.Forms.Label lblEstado;
         private System.Windows.Forms.GroupBox grpRecorridos;
         private System.Windows.Forms.RadioButton rdbPostorden;
@@ -243,6 +283,8 @@
         private System.Windows.Forms.RadioButton rdbPreorden;
         private System.Windows.Forms.Label lblRecorridoTitulo;
         private System.Windows.Forms.TextBox txtRecorrido;
+        private System.Windows.Forms.Button btnCargarArchivo;
+        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
     }
 }
 

@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace Gabo
@@ -31,8 +33,14 @@ namespace Gabo
         }
 
         public Form1()
-        {
+        { 
             InitializeComponent();
+
+            //esta linea es para poder acceder a picLienzo y puede ejecutar el codigo, debido a que no puedo acceder desde el diseño
+            picLienzo.MouseClick += picLienzo_MouseClick;
+            picLienzo.MouseMove += picLienzo_MouseMove;
+            //termina
+
             _animacionTimer = new Timer { Interval = AnimationIntervalMs };
             _animacionTimer.Tick += AnimacionTimer_Tick;
 
@@ -75,8 +83,8 @@ namespace Gabo
 
                 var metodo = ObtenerMetodoSeleccionado();
 
-                _currentRoot = BuildBalancedStructure(valores.Count);
-                AsignarValoresPorRecorrido(_currentRoot, valores, metodo);
+                _currentRoot = BuildBalancedStructure(valores, 0);
+                //AsignarValoresPorRecorrido(_currentRoot, valores, metodo);
 
                 RenderTree(valores.Count);
 
@@ -109,32 +117,34 @@ namespace Gabo
         private List<string> ParseInput()
         {
             return txtNodos.Text
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                //.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Split(new[] { ',' })
                 .Select(token => token.Trim())
                 .Where(token => !string.IsNullOrWhiteSpace(token))
                 .ToList();
         }
 
-        private TreeNodeModel BuildBalancedStructure(int count)
+        private TreeNodeModel BuildBalancedStructure(List<string> valores, int index)
         {
-            if (count <= 0)
+            if (index >= valores.Count || valores[index] == "-")
             {
                 return null;
             }
 
-            int leftCount = (count - 1) / 2;
-            int rightCount = count - 1 - leftCount;
+            var node = new TreeNodeModel(valores[index]);
+            node.Index = index;
 
-            var node = new TreeNodeModel(string.Empty)
-            {
-                Left = BuildBalancedStructure(leftCount),
-                Right = BuildBalancedStructure(rightCount)
-            };
+            //hijo izquierdo = 2 * indice + 1
+            //hijo derecho   = 2 * indice + 2
+            node.Left = BuildBalancedStructure(valores, 2 * index + 1);
+            node.Right = BuildBalancedStructure(valores, 2 * index + 2);
 
             return node;
         }
-
-        private void AsignarValoresPorRecorrido(TreeNodeModel root, IList<string> valores, TraversalMethod metodo)
+        
+        //ya no hace falta este constructor,
+        //en el nuevo buildbalancedstructure construye el arbol con los valores del nuevo metodo
+        /*private void AsignarValoresPorRecorrido(TreeNodeModel root, IList<string> valores, TraversalMethod metodo)
         {
             int indice = 0;
 
@@ -159,6 +169,7 @@ namespace Gabo
                 return;
             }
 
+            node.Index = indice;
             node.Value = valores[indice++];
             AsignarPreorden(node.Left, valores, ref indice);
             AsignarPreorden(node.Right, valores, ref indice);
@@ -172,6 +183,7 @@ namespace Gabo
             }
 
             AsignarInorden(node.Left, valores, ref indice);
+            node.Index = indice;
             node.Value = valores[indice++];
             AsignarInorden(node.Right, valores, ref indice);
         }
@@ -185,8 +197,9 @@ namespace Gabo
 
             AsignarPostorden(node.Left, valores, ref indice);
             AsignarPostorden(node.Right, valores, ref indice);
+            node.Index = indice;
             node.Value = valores[indice++];
-        }
+        }*/
 
         private void RenderTree(int totalNodos)
         {
@@ -491,6 +504,202 @@ namespace Gabo
             public PointF Position { get; set; }
             public bool IsVisited { get; set; }
             public bool IsCurrent { get; set; }
+
+            //index para efectuar los cambios de arbol
+            public int Index { get; set; }
+        }
+
+        //Lo nuevo que agregue
+        private void btnCargarArchivo_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+           
+                openFileDialog.Filter = "archivo de texto (*.txt)|*.txt|todos los archivos (*.*)|*.*";
+                openFileDialog.Title = "seleccionar archivo de arbol";
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        string contenido = File.ReadAllText(openFileDialog.FileName);
+                     
+                        txtNodos.Text = contenido;
+
+                        ProcesarEntrada();
+
+                        MostrarEstado("archivo cargado correctamente.", false);
+                    }
+                    catch (Exception ex)
+                    {
+                        MostrarEstado($"error al leer el archivo: {ex.Message}", true);
+                    }
+                }
+            }
+        }
+     
+        private void picLienzo_MouseClick(object sender, MouseEventArgs e)
+        {
+            var listaNodos = ParseInput();
+            if (listaNodos == null) listaNodos = new List<string>();
+
+            var nodoTocado = BuscarNodoClickeado(_currentRoot, e.Location);
+
+            if (e.Button == MouseButtons.Right)
+            {
+                ContextMenuStrip menu = new ContextMenuStrip();
+
+                if (nodoTocado != null)
+                {
+                    
+                    menu.Items.Add("Editar Valor", null, (s, args) => {
+                        int start = 0;
+                        for (int i = 0; i < nodoTocado.Index; i++)
+                            start += (i < listaNodos.Count ? listaNodos[i].Length : 1) + 1;
+
+                        txtNodos.Focus();
+                        if (start < txtNodos.TextLength)
+                            txtNodos.Select(start, listaNodos[nodoTocado.Index].Length);
+                    });
+
+                    menu.Items.Add("Eliminar", null, (s, args) => {
+                        if (nodoTocado.Index < listaNodos.Count)
+                        {
+                            listaNodos[nodoTocado.Index] = "-"; // Lo volvemos hueco
+                            ActualizarArbolDesdeLista(listaNodos); // Esto limpia y actualiza
+                        }
+                    });
+
+                    menu.Items.Add(new ToolStripSeparator());
+
+                    //agregar izquierda
+                    int indiceIzq = 2 * nodoTocado.Index + 1;
+                    bool ocupadoIzq = indiceIzq < listaNodos.Count && listaNodos[indiceIzq] != "-";
+
+                    var itemIzq = menu.Items.Add("Agregar Izquierda", null, (s, args) => {
+                        AgregarNodoEnIndice(listaNodos, indiceIzq);
+                    });
+                    itemIzq.Enabled = !ocupadoIzq;
+
+                    //agregar derecha
+                    int indiceDer = 2 * nodoTocado.Index + 2;
+                    bool ocupadoDer = indiceDer < listaNodos.Count && listaNodos[indiceDer] != "-";
+
+                    var itemDer = menu.Items.Add("Agregar Derecha", null, (s, args) => {
+                        AgregarNodoEnIndice(listaNodos, indiceDer);
+                    });
+                    itemDer.Enabled = !ocupadoDer;
+                }
+                else
+                {
+                    //fondo
+                    bool arbolVacio = listaNodos.Count == 0 || listaNodos.All(n => n == "-");
+                    if (arbolVacio)
+                    {
+                        menu.Items.Add("Crear Raíz", null, (s, args) => {
+                            listaNodos.Clear();
+                            listaNodos.Add("A");
+                            ActualizarArbolDesdeLista(listaNodos);
+                        });
+                    }
+                    else
+                    {
+                        menu.Items.Add("Limpiar Huecos (Compactar)", null, (s, args) => {
+                            listaNodos.RemoveAll(n => n == "-");
+                            ActualizarArbolDesdeLista(listaNodos);
+                        });
+                    }
+                }
+                menu.Show(picLienzo, e.Location);
+            }
+        }
+
+        private void AgregarNodoEnIndice(List<string> lista, int indiceObjetivo)
+        {
+          
+            while (lista.Count <= indiceObjetivo)
+            {
+                lista.Add("-");
+            }
+
+            char nuevaLetra = 'A';
+
+            var nodosReales = lista.Where(x => x != "-" && x.Length > 0).ToList();
+
+            if (nodosReales.Count > 0)
+            {
+                string ultimo = nodosReales.Last();
+
+                if (int.TryParse(ultimo, out int num))
+                {
+                    nuevaLetra = (char)('0' + num + 1);
+                    if (num >= 9) nuevaLetra = 'A';
+                    else lista[indiceObjetivo] = (num + 1).ToString();
+                }
+                else
+                {
+                    char ultimaChar = ultimo[0];
+                    if (ultimaChar >= 'Z') nuevaLetra = 'A';
+                    else nuevaLetra = (char)(ultimaChar + 1);
+                }
+            }
+
+            if (lista[indiceObjetivo] == "-")
+            {
+                if (!int.TryParse(nodosReales.LastOrDefault() ?? "0", out _))
+                    lista[indiceObjetivo] = nuevaLetra.ToString();
+            }
+
+            ActualizarArbolDesdeLista(lista);
+        }
+
+        private void TrimLista(List<string> lista)
+        { 
+            while (lista.Count > 0 && lista[lista.Count - 1] == "-")
+            {
+                lista.RemoveAt(lista.Count - 1);
+            }
+        }
+
+        private void ActualizarArbolDesdeLista(List<string> lista)
+        {
+            TrimLista(lista);
+            txtNodos.Text = string.Join(",", lista);
+            ProcesarEntrada();
+        }
+
+        private TreeNodeModel BuscarNodoClickeado(TreeNodeModel node, PointF mousePos)
+        {
+            if (node == null) return null;
+
+            float radioSensible = NodeRadius + 5;
+
+            float dx = node.Position.X - mousePos.X;
+            float dy = node.Position.Y - mousePos.Y;
+
+            if (dx * dx + dy * dy <= radioSensible * radioSensible)
+            {
+                return node;
+            }
+
+            var izq = BuscarNodoClickeado(node.Left, mousePos);
+            if (izq != null) return izq;
+
+            return BuscarNodoClickeado(node.Right, mousePos);
+        }
+
+        private void picLienzo_MouseMove(object sender, MouseEventArgs e)
+        {
+            var nodoBajoMouse = BuscarNodoClickeado(_currentRoot, e.Location);
+
+            if (nodoBajoMouse != null)
+            {
+                picLienzo.Cursor = Cursors.Hand;
+            }
+            else
+            {
+                picLienzo.Cursor = Cursors.Cross;
+            }
         }
     }
 }
