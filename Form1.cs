@@ -142,7 +142,7 @@ namespace Gabo
             return node;
         }
         
-        //ya no hace falta este constructor,
+        //ya no hace falta esto,
         //en el nuevo buildbalancedstructure construye el arbol con los valores del nuevo metodo
         /*private void AsignarValoresPorRecorrido(TreeNodeModel root, IList<string> valores, TraversalMethod metodo)
         {
@@ -565,8 +565,8 @@ namespace Gabo
                     menu.Items.Add("Eliminar", null, (s, args) => {
                         if (nodoTocado.Index < listaNodos.Count)
                         {
-                            listaNodos[nodoTocado.Index] = "-"; // Lo volvemos hueco
-                            ActualizarArbolDesdeLista(listaNodos); // Esto limpia y actualiza
+                            listaNodos[nodoTocado.Index] = "-";
+                            ActualizarArbolDesdeLista(listaNodos); 
                         }
                     });
 
@@ -613,7 +613,7 @@ namespace Gabo
                 menu.Show(picLienzo, e.Location);
             }
         }
-
+        // los - es el espacio del nodo al momento de agregarlo en la izq o der, solo afecta el UX del user
         private void AgregarNodoEnIndice(List<string> lista, int indiceObjetivo)
         {
           
